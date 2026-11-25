@@ -1,0 +1,9 @@
+{
+  "name": "hyrox-phase10-deploy",
+  "version": "10.0.0",
+  "private": true,
+  "description": "HYROX Phase 10 private deploy package: static app + one Netlify Function (OpenAI photo analysis).",
+  "type": "module",
+  "engines": { "node": ">=22.12.0" },
+  "dependencies": { "@netlify/blobs": "11.1.9" }
+}

@@ -1,0 +1,30 @@
+FILES THAT MAKE UP THE APP (static site; nothing else is needed or should be served)
+
+  index.html
+  src/ai/photo-ai.js
+  src/data/food-db.js
+  src/data/food-db-us.js
+  src/data/hyrox-fibersodium.js
+  src/data/hyrox-blocks.js
+  src/data/hyrox-data.js
+  src/data/hyrox-foodcalc.js
+  src/data/hyrox-morning.js
+  src/data/hyrox-coach.js
+  src/data/hyrox-coach-export.js
+  src/data/hyrox-foodsearch.js
+  src/data/hyrox-nutrition.js
+  src/data/hyrox-plan.js
+  src/data/hyrox-wellness.js
+  src/integrations/stubs.js
+  src/integrations/garmin-import.js
+  src/ui/app.js
+  src/ui/app-ext.js
+  src/ui/style.css
+
+NEVER SERVE OR DEPLOY
+  ai-test-backend/   local test adapter only: no authentication, no rate limiting
+  tests/             test code and fixtures
+  test-results/      logs and historical evidence
+  *.md, *.txt        handover and QA documents
+
+This list describes the app. It is not an approval to deploy; the owner decides that.

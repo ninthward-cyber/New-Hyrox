@@ -1,0 +1,20 @@
+# Phase 9 deploy package. Used with `netlify deploy` from this folder (see DEPLOY-AND-SECURE-CONFIG-PHASE9.md).
+[build]
+  publish = "publish"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Same-origin API for the app: rewrites (status 200) to the function. The browser keeps using /api/food-photo/...
+[[redirects]]
+  from = "/api/food-photo/status"
+  to = "/.netlify/functions/food-photo"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/food-photo/analyze"
+  to = "/.netlify/functions/food-photo"
+  status = 200
+  force = true

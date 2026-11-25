@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#111418">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- Build label (Settings > About this build). hyrox-build-id is "dev" in the source tree; tools/build-deploy-package.mjs
+       stamps the packaged copy with the first 12 hex digits of the SHA-256 over the 20 app files as they are in the source. -->
+  <meta name="hyrox-release" content="P1.4-RC3">
+  <meta name="hyrox-build-date" content="2026-11-23">
+  <meta name="hyrox-build-id" content="dev">
+  <title>HYROX Tracker</title>
+  <link rel="stylesheet" href="src/ui/style.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1>HYROX Tracker</h1>
+    <p class="subtitle">Training · Body · Nutrition · Recovery</p>
+  </header>
+
+  <div id="app-error" class="app-error" role="alert" hidden data-testid="app-error"></div>
+  <div id="storage-warning" class="app-error" role="alert" hidden data-testid="storage-warning"></div>
+  <!-- P6 load guard: shown when any app script did not load (see the inline check after the last script). Writes nothing. -->
+  <div id="load-guard" class="app-error load-guard" role="alert" hidden data-testid="load-guard">
+    <p id="load-guard-message" data-testid="load-guard-message"></p>
+    <p id="load-guard-missing" class="hint" data-testid="load-guard-missing" hidden></p>
+    <button type="button" id="load-guard-reload" class="btn btn-secondary" data-testid="load-guard-reload">Reload the page</button>
+  </div>
+
+  <!-- P6 storage context (RC-1): read-only. Shown when this browser context holds no saved records. Writes nothing, never restores. -->
+  <section id="storage-context" class="note note-warn storage-context" role="status" hidden data-testid="storage-context" aria-labelledby="storage-context-title">
+    <p class="storage-context-title" id="storage-context-title" data-testid="storage-context-title"><span aria-hidden="true">&#9888;</span> No saved data found in THIS browser context.</p>
+    <p data-testid="storage-context-note">This is not proof that anything was deleted. Each web address, Safari tab, Home Screen app and browser profile keeps its own separate data.</p>
+    <ul class="storage-context-list" id="storage-context-list" data-testid="storage-context-list"></ul>
+    <p data-testid="storage-context-guidance">Open the app from the same address or Home Screen icon you used before. If you have a backup file, use "Restore from backup" in Settings, but check the other places first. This message never restores, changes or deletes anything.</p>
+  </section>
+
+  <nav class="tabbar" role="tablist" aria-label="Sections" data-testid="tabbar">
+    <button type="button" role="tab" class="tab" id="tab-today" data-tab="today" aria-controls="panel-today" data-testid="tab-today">Today</button>
+    <button type="button" role="tab" class="tab" id="tab-add" data-tab="add" aria-controls="panel-add" data-testid="tab-add">Add</button>
+    <button type="button" role="tab" class="tab" id="tab-history" data-tab="history" aria-controls="panel-history" data-testid="tab-history">History</button>
+    <button type="button" role="tab" class="tab" id="tab-trends" data-tab="trends" aria-controls="panel-trends" data-testid="tab-trends">Trends</button>
+    <button type="button" role="tab" class="tab" id="tab-settings" data-tab="settings" aria-controls="panel-settings" data-testid="tab-settings">Settings</button>
+  </nav>
+
+  <main id="app">
+    <div id="ext-toast" class="toast" role="status" aria-live="polite" hidden data-testid="ext-toast"></div>
+
+    <section id="panel-today" class="panel" role="tabpanel" aria-labelledby="tab-today" data-testid="panel-today">
+      <div id="today-root" data-testid="today-root"></div>
+    </section>
+
+    <section id="panel-add" class="panel" role="tabpanel" aria-labelledby="tab-add" hidden data-testid="panel-add">
+      <div class="segmented" role="group" aria-label="What to add" data-testid="add-modes">
+        <button type="button" class="seg" data-mode="meal" data-testid="add-mode-meal">Meal</button>
+        <button type="button" class="seg" data-mode="workout" data-testid="add-mode-workout">Workout</button>
+        <button type="button" class="seg" data-mode="body" data-testid="add-mode-body">Weight &amp; waist</button>
+        <button type="button" class="seg" data-mode="daily" data-testid="add-mode-daily">Check-in</button>
+        <button type="button" class="seg" data-mode="morning" data-testid="add-mode-morning">Morning</button>
+        <button type="button" class="seg" data-mode="walk" data-testid="add-mode-walk">Walk</button>
+        <button type="button" class="seg" data-mode="classic" data-testid="add-mode-classic">Quick log</button>
+      </div>
+      <div id="add-root" data-testid="add-root"></div>
+    <!-- Weight -->
+    <section class="card" aria-labelledby="weight-heading" data-add-mode="body classic" data-testid="weight-card">
+      <h2 id="weight-heading">Weight</h2>
+      <form id="weight-form" data-testid="weight-form" novalidate>
+        <div class="row">
+          <div class="field">
+            <label for="weight-date">Date</label>
+            <input id="weight-date" name="date" type="date" required data-testid="weight-date" aria-describedby="weight-error-date">
+            <p class="field-error" id="weight-error-date" data-testid="weight-error-date" aria-live="polite"></p>
+          </div>
+          <div class="field">
+            <label for="weight-kg" id="weight-kg-label" data-testid="weight-kg-label">Weight (kg)</label>
+            <input id="weight-kg" name="kg" type="number" inputmode="decimal" step="0.1" min="0" placeholder="e.g. 78.4" required data-testid="weight-kg" aria-describedby="weight-error-kg">
+            <p class="field-error" id="weight-error-kg" data-testid="weight-error-kg" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="form-error" id="weight-error-form" data-testid="weight-error-form" aria-live="polite"></p>
+        <button type="submit" class="btn btn-primary" data-testid="weight-submit">Add weight</button>
+      </form>
+      <h3 class="list-heading">History</h3>
+      <ul id="weight-list" class="entry-list" data-testid="weight-list"></ul>
+    </section>
+
+    <!-- Workouts -->
+    <section class="card" aria-labelledby="workout-heading" data-add-mode="classic" data-testid="classic-workout-card">
+      <h2 id="workout-heading">Quick workout (basic)</h2>
+      <form id="workout-form" data-testid="workout-form" novalidate>
+        <div class="row">
+          <div class="field">
+            <label for="workout-date">Date</label>
+            <input id="workout-date" name="date" type="date" required data-testid="workout-date" aria-describedby="workout-error-date">
+            <p class="field-error" id="workout-error-date" data-testid="workout-error-date" aria-live="polite"></p>
+          </div>
+          <div class="field">
+            <label for="workout-duration">Duration (min)</label>
+            <input id="workout-duration" name="durationMin" type="number" inputmode="numeric" step="1" min="0" placeholder="e.g. 60" required data-testid="workout-duration" aria-describedby="workout-error-durationMin">
+            <p class="field-error" id="workout-error-durationMin" data-testid="workout-error-durationMin" aria-live="polite"></p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="workout-activity">Activity</label>
+          <input id="workout-activity" name="activity" type="text" autocomplete="off" placeholder="e.g. Run + wall balls" required data-testid="workout-activity" aria-describedby="workout-error-activity">
+          <p class="field-error" id="workout-error-activity" data-testid="workout-error-activity" aria-live="polite"></p>
+        </div>
+        <div class="field">
+          <label class="check" for="workout-partial">
+            <input id="workout-partial" name="partial" type="checkbox" data-testid="workout-partial" aria-describedby="workout-error-partial">
+            <span>Partial session</span>
+          </label>
+          <p class="field-error" id="workout-error-partial" data-testid="workout-error-partial" aria-live="polite"></p>
+        </div>
+        <div class="field">
+          <label for="workout-notes">Notes <span class="optional">(optional)</span></label>
+          <textarea id="workout-notes" name="notes" rows="2" placeholder="How did it go?" data-testid="workout-notes" aria-describedby="workout-error-notes"></textarea>
+          <p class="field-error" id="workout-error-notes" data-testid="workout-error-notes" aria-live="polite"></p>
+        </div>
+        <p class="form-error" id="workout-error-form" data-testid="workout-error-form" aria-live="polite"></p>
+        <button type="submit" class="btn btn-primary" data-testid="workout-submit">Add workout</button>
+      </form>
+      <h3 class="list-heading">History</h3>
+      <ul id="workout-list" class="entry-list" data-testid="workout-list"></ul>
+    </section>
+
+    <!-- Nutrition -->
+    <section class="card" aria-labelledby="nutrition-heading" data-add-mode="classic" data-testid="classic-nutrition-card">
+      <h2 id="nutrition-heading">Quick kcal / protein (basic)</h2>
+      <form id="nutrition-form" data-testid="nutrition-form" novalidate>
+        <div class="row">
+          <div class="field">
+            <label for="nutrition-date">Date</label>
+            <input id="nutrition-date" name="date" type="date" required data-testid="nutrition-date" aria-describedby="nutrition-error-date">
+            <p class="field-error" id="nutrition-error-date" data-testid="nutrition-error-date" aria-live="polite"></p>
+          </div>
+          <div class="field">
+            <label for="nutrition-label">Label <span class="optional">(optional)</span></label>
+            <input id="nutrition-label" name="label" type="text" autocomplete="off" placeholder="e.g. Lunch" data-testid="nutrition-label" aria-describedby="nutrition-error-label">
+            <p class="field-error" id="nutrition-error-label" data-testid="nutrition-error-label" aria-live="polite"></p>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="nutrition-calories">Calories (kcal)</label>
+            <input id="nutrition-calories" name="calories" type="number" inputmode="numeric" step="1" min="0" placeholder="e.g. 650" required data-testid="nutrition-calories" aria-describedby="nutrition-error-calories">
+            <p class="field-error" id="nutrition-error-calories" data-testid="nutrition-error-calories" aria-live="polite"></p>
+          </div>
+          <div class="field">
+            <label for="nutrition-protein">Protein (g)</label>
+            <input id="nutrition-protein" name="proteinG" type="number" inputmode="decimal" step="0.1" min="0" placeholder="e.g. 40" required data-testid="nutrition-protein" aria-describedby="nutrition-error-proteinG">
+            <p class="field-error" id="nutrition-error-proteinG" data-testid="nutrition-error-proteinG" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="form-error" id="nutrition-error-form" data-testid="nutrition-error-form" aria-live="polite"></p>
+        <button type="submit" class="btn btn-primary" data-testid="nutrition-submit">Add entry</button>
+      </form>
+      <h3 class="list-heading">Daily totals</h3>
+      <ul id="nutrition-totals" class="entry-list totals-list" data-testid="nutrition-totals"></ul>
+      <h3 class="list-heading">Entries</h3>
+      <ul id="nutrition-list" class="entry-list" data-testid="nutrition-list"></ul>
+    </section>
+
+    </section>
+
+    <section id="panel-history" class="panel" role="tabpanel" aria-labelledby="tab-history" hidden data-testid="panel-history">
+      <div id="history-root" data-testid="history-root"></div>
+    </section>
+
+    <section id="panel-trends" class="panel" role="tabpanel" aria-labelledby="tab-trends" hidden data-testid="panel-trends">
+      <div id="trends-root" data-testid="trends-root"></div>
+    </section>
+
+    <section id="panel-settings" class="panel" role="tabpanel" aria-labelledby="tab-settings" hidden data-testid="panel-settings">
+      <div id="settings-root" data-testid="settings-root"></div>
+    <!-- Backup -->
+    <section class="card" aria-labelledby="backup-heading">
+      <h2 id="backup-heading">Backup</h2>
+      <p class="muted">Download all your data as a JSON file.</p>
+      <details class="storage-diagnostic" id="storage-diagnostic" data-testid="storage-diagnostic">
+        <summary data-testid="storage-diagnostic-summary">Where is my data stored? (read-only check)</summary>
+        <ul class="storage-context-list" id="storage-diagnostic-list" data-testid="storage-diagnostic-list"></ul>
+        <p class="hint">Data lives only in this browser context. Safari tabs and the Home Screen app are separate. This check only reads; it never changes anything.</p>
+      </details>
+      <button type="button" id="export-btn" class="btn btn-secondary" data-testid="export-btn">Export JSON backup</button>
+      <p class="hint" id="backup-last" data-testid="backup-last" role="status"></p>
+      <p class="form-error" id="export-error" data-testid="export-error" aria-live="polite"></p>
+      <p class="note note-warn" id="export-omitted" data-testid="export-omitted" role="status" hidden></p>
+      <!-- P4-F01: shown when this build's own restore check refuses the exported file (store.exportChecked). -->
+      <div class="note note-danger urgent" id="export-not-restorable" data-testid="export-not-restorable" role="alert" hidden>
+        <p class="error-headline" id="export-not-restorable-head" data-testid="export-not-restorable-head"></p>
+        <ul class="error-list" id="export-not-restorable-reasons" data-testid="export-not-restorable-reasons"></ul>
+        <p id="export-not-restorable-more" data-testid="export-not-restorable-more" hidden></p>
+        <p id="export-not-restorable-raw" data-testid="export-not-restorable-raw" hidden></p>
+      </div>
+
+      <!-- Emergency raw recovery copy (Dawit: store.rawRecoveryExport). Shown only when the data layer provides it. -->
+      <div class="raw-recovery" id="raw-recovery" data-testid="raw-recovery" role="region" aria-labelledby="raw-recovery-heading" hidden>
+        <h3 class="list-heading" id="raw-recovery-heading" data-testid="raw-recovery-heading">Emergency raw recovery copy</h3>
+        <p class="muted" id="raw-recovery-intro" data-testid="raw-recovery-intro">For damaged data. Downloads the exact text stored on this device, including damaged records that the normal backup leaves out. It is NOT a normal backup and cannot be restored with "Restore from backup". Keep it safe.</p>
+        <p class="note note-warn urgent" id="raw-recovery-pre" data-testid="raw-recovery-pre" role="status" hidden></p>
+        <button type="button" id="raw-recovery-btn" class="btn btn-secondary" data-testid="raw-recovery-btn">Download emergency raw copy</button>
+        <p class="form-error" id="raw-recovery-error" data-testid="raw-recovery-error" aria-live="polite"></p>
+        <div class="note note-warn" id="raw-recovery-result" data-testid="raw-recovery-result" role="status" hidden>
+          <p id="raw-recovery-warning" data-testid="raw-recovery-warning"></p>
+          <p id="raw-recovery-sources" data-testid="raw-recovery-sources"></p>
+        </div>
+      </div>
+
+      <!-- Restore (REPLACE only; no Undo in P0) -->
+      <div class="import-section" id="import-section" data-testid="import-section" role="region" aria-labelledby="import-heading">
+        <h3 class="list-heading" id="import-heading" data-testid="import-heading">Restore from backup</h3>
+        <p class="muted" id="import-intro" data-testid="import-intro">Pick a backup file. You will see what it contains before anything changes. Restoring replaces all data on this device.</p>
+        <p class="note note-warn" id="import-disabled-reason" data-testid="import-disabled-reason" role="status" hidden></p>
+        <p class="note note-warn" id="import-damaged-note" data-testid="import-damaged-note" hidden></p>
+        <p class="note" id="import-backup-note" data-testid="import-backup-note" hidden></p>
+
+        <input type="file" id="import-file" class="visually-hidden" data-testid="import-file" aria-describedby="import-intro">
+        <label for="import-file" id="import-btn" class="btn btn-secondary btn-file" data-testid="import-btn">Restore from backup…</label>
+
+        <p class="note" id="import-status" data-testid="import-status" role="status" aria-live="polite" hidden></p>
+
+        <div class="import-preview" id="import-preview" data-testid="import-preview" hidden>
+          <p class="preview-title" id="import-preview-source" data-testid="import-preview-source"></p>
+          <dl class="preview-grid">
+            <dt>Weight</dt><dd id="import-count-weight" data-testid="import-count-weight"></dd>
+            <dt>Workouts</dt><dd id="import-count-workouts" data-testid="import-count-workouts"></dd>
+            <dt>Nutrition</dt><dd id="import-count-nutrition" data-testid="import-count-nutrition"></dd>
+            <dt>Partial workouts</dt><dd id="import-partial-count" data-testid="import-partial-count"></dd>
+          </dl>
+          <p class="preview-line" id="import-current" data-testid="import-current"></p>
+          <p class="preview-line" id="import-replaced-backup" data-testid="import-replaced-backup" hidden></p>
+          <p class="preview-line" id="import-ext-counts" data-testid="import-ext-counts" hidden></p>
+          <ul class="preview-warnings" id="import-preview-warnings" data-testid="import-preview-warnings" hidden></ul>
+          <p class="note note-danger" id="import-empty-note" data-testid="import-empty-note" hidden>This backup is empty. Restoring it will leave the app empty.</p>
+          <!-- P4-O1 (owner-approved): empty backup over a populated device needs a second, separate confirmation. -->
+          <div class="note note-danger empty-danger" id="import-empty-warning" data-testid="import-empty-warning" role="alert" aria-labelledby="import-empty-title" aria-describedby="import-empty-text" hidden>
+            <p class="empty-danger-title" id="import-empty-title" data-testid="import-empty-title" tabindex="-1"><span class="empty-danger-icon" aria-hidden="true">&#9888;</span> EMPTY BACKUP — THIS WILL REMOVE CURRENT ENTRIES</p>
+            <p id="import-empty-text" data-testid="import-empty-text"></p>
+            <table class="empty-danger-table" data-testid="import-empty-table">
+              <caption class="visually-hidden">Entries on this device now and in this backup</caption>
+              <thead><tr><th scope="col">List</th><th scope="col">On this device now</th><th scope="col">In this backup</th></tr></thead>
+              <tbody id="import-empty-rows" data-testid="import-empty-rows"></tbody>
+            </table>
+            <label class="empty-danger-check" for="import-empty-confirm" data-testid="import-empty-confirm-label">
+              <input type="checkbox" id="import-empty-confirm" data-testid="import-empty-confirm" aria-describedby="import-empty-text">
+              <span>Yes, remove all current entries and leave this device empty</span>
+            </label>
+            <p class="hint" id="import-empty-hint" data-testid="import-empty-hint">Second confirmation: tick the box, then press "Replace my data". Cancel or Escape changes nothing.</p>
+          </div>
+          <!-- P4-F02: a previous restore did not finish; its safety copy is the only copy of the earlier data. -->
+          <p class="note note-danger urgent" id="import-prior-blocked" data-testid="import-prior-blocked" role="alert" hidden></p>
+          <p class="note note-danger" id="import-warning" data-testid="import-warning"><strong>Restore REPLACES all data on this device.</strong> Entries on this device that are not in the backup will be removed.</p>
+          <button type="button" id="import-export-first" class="btn btn-secondary" data-testid="import-export-first">Export current data first</button>
+          <button type="button" id="import-confirm" class="btn btn-danger" data-testid="import-confirm">Replace my data</button>
+          <button type="button" id="import-cancel" class="btn btn-secondary" data-testid="import-cancel">Cancel</button>
+        </div>
+
+        <div class="note note-danger" id="import-error" data-testid="import-error" role="alert" hidden>
+          <p class="error-headline" id="import-error-message" data-testid="import-error-message"></p>
+          <p class="error-detail" id="import-error-detail" data-testid="import-error-detail" hidden></p>
+          <ul class="error-list" id="import-error-list" data-testid="import-error-list" hidden></ul>
+          <div class="import-details" id="import-details" data-testid="import-details" hidden></div>
+        </div>
+        <p class="note note-ok" id="import-result" data-testid="import-result" role="status" hidden></p>
+      </div>
+    </section>
+      <div id="settings-after" data-testid="settings-after"></div>
+      <div id="garmin-import-root" data-testid="garmin-import-root" hidden></div>
+    </section>
+
+  </main>
+
+  <script src="src/data/hyrox-data.js"></script>
+  <script src="src/data/hyrox-plan.js"></script>
+  <script src="src/data/hyrox-blocks.js"></script>
+  <script src="src/data/hyrox-nutrition.js"></script>
+  <script src="src/data/hyrox-wellness.js"></script>
+  <script src="src/data/hyrox-morning.js"></script>
+  <script src="src/data/hyrox-coach.js"></script>
+  <script src="src/data/hyrox-coach-export.js"></script>
+  <script src="src/data/hyrox-foodcalc.js"></script>
+  <script src="src/data/hyrox-foodsearch.js"></script>
+  <script src="src/data/hyrox-fibersodium.js"></script>
+  <script src="src/ai/photo-ai.js"></script>
+  <script src="src/integrations/stubs.js"></script>
+  <script src="src/integrations/garmin-import.js"></script>
+  <script src="src/ui/app.js"></script>
+  <script src="src/ui/app-ext.js"></script>
+  <script>
+    /* P6 load guard (RC-2). Runs after the last script tag, so every script has either run or failed.
+       Each script leaves a flag (its global; app-ext.js sets window.HyroxExtReady at its very end).
+       src/data/food-db.js is deliberately NOT checked: it is loaded lazily and is optional (manual entry keeps working without it).
+       Reads and writes no stored data. textContent only. */
+    (function () {
+      var need = [
+        ['src/data/hyrox-data.js', 'HyroxData'], ['src/data/hyrox-plan.js', 'HyroxPlan'], ['src/data/hyrox-blocks.js', 'HyroxBlocks'], ['src/data/hyrox-nutrition.js', 'HyroxNutrition'],
+        ['src/data/hyrox-wellness.js', 'HyroxWellness'], ['src/data/hyrox-morning.js', 'HyroxMorning'], ['src/data/hyrox-coach.js', 'HyroxCoach'], ['src/data/hyrox-coach-export.js', 'HyroxCoachExport'], ['src/data/hyrox-foodcalc.js', 'HyroxFoodCalc'], ['src/ai/photo-ai.js', 'HyroxPhotoAI'], ['src/integrations/stubs.js', 'HyroxIntegrations'], ['src/integrations/garmin-import.js', 'HyroxGarminImport'],
+        ['src/ui/app.js', 'HyroxImportUI'], ['src/ui/app-ext.js', 'HyroxExtReady']
+      ];
+      var missing = need.filter(function (n) { return !window[n[1]]; }).map(function (n) { return n[0]; });
+      if (!missing.length) return;
+      var box = document.getElementById('load-guard');
+      if (!box) return;
+      document.getElementById('load-guard-message').textContent = 'Part of the app did not load. Your saved records are safe.';
+      var m = document.getElementById('load-guard-missing');
+      m.textContent = 'Not loaded: ' + missing.join(', ') + '. Nothing was changed. Reload the page; if this repeats, check your connection or sign in again.';
+      m.hidden = false;
+      document.getElementById('load-guard-reload').addEventListener('click', function () { window.location.reload(); });
+      box.hidden = false;
+    })();
+  </script>
+</body>
+</html>
